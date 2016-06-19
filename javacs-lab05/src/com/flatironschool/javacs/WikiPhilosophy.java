@@ -12,7 +12,8 @@ import org.jsoup.select.Elements;
 
 public class WikiPhilosophy {
 	
-	final static WikiFetcher wf = new WikiFetcher();
+	private static WikiFetcher wf = new WikiFetcher();
+        final static String wiki_base_url = "https://en.wikipedia.org"; 
 	
 	/**
 	 * Tests a conjecture about Wikipedia and Philosophy.
@@ -31,21 +32,75 @@ public class WikiPhilosophy {
 		
         // some example code to get you started
 
-		String url = "https://en.wikipedia.org/wiki/Java_(programming_language)";
-		Elements paragraphs = wf.fetchWikipedia(url);
+                // String url = "https://en.wikipedia.org/wiki/Java_(programming_language)";
+		String url = "https://en.wikipedia.org/wiki/Apple";
+		Boolean found = crawl(url); 
+                if(found)
+                        System.exit(0);
+                else
+                        System.exit(1);
+	}
+        private static Boolean crawl(String url){
+                String wiki = "https://en.wikipedia.org/wiki/Philosophy"; 
+                // Is it a good idea to make List a global and store links there? 
+                
+                System.out.println(url); 
+                if (url.equals(wiki)){
+                        return true; 
+                }
+                try{
+                        Elements paragraphs = wf.fetchWikipedia(url);
+                        for (Element paragraph: paragraphs){
+                                Iterable<Node> iter = new WikiNodeIterable(paragraph);
+                                int parenthesis_count = 0; 
+                                for (Node node: iter){
+                                        if (node instanceof TextNode) {
+                                                TextNode current = (TextNode)node; 
+                                                String text = current.text();  
+                                                if (text.contains( "(" )){
+                                                        parenthesis_count++; 
+                                                }
+                                                else if (text.contains( ")" )){
+                                                        parenthesis_count--; 
+                                                }
+                                        } 
+                                        else if (node instanceof Element){
+                                                String link = node.attr("href");
+                                                String thresholdText = "/wiki/";
+                                                Element elem = (Element)node; 
+                                                if (isValidLink(elem) && parenthesis_count == 0){
+                                                        String first_url = wiki_base_url + link;
+                                                        return crawl(first_url);
+                                                }
+                                        }
+                                }
+                        }
+                        return false; 
+                }catch(IOException e){
+                        e.printStackTrace();
+                }
+                return false;
+               
+        }
+        private static Boolean isValidLink(Element elem){
+                String link = elem.attr("href");
+                Elements parents = elem.parents(); 
 
-		Element firstPara = paragraphs.get(0);
-		
-		Iterable<Node> iter = new WikiNodeIterable(firstPara);
-		for (Node node: iter) {
-			if (node instanceof TextNode) {
-				System.out.print(node);
-			}
+                return isLinkCurrentPage(link) && notItalics(parents);         
         }
 
-        // the following throws an exception so the test fails
-        // until you update the code
-        String msg = "Complete this lab by adding your code and removing this statement.";
-        throw new UnsupportedOperationException(msg);
-	}
+        private static Boolean isLinkCurrentPage(String link){
+                String thresholdText = "/wiki/";
+                return link.startsWith(thresholdText); 
+        }
+
+        private static Boolean notItalics(Elements parents){
+                for (Element parent: parents){
+                        String tag = parent.tagName(); 
+                        if (tag == "i" || tag == "em"){
+                                return false; 
+                        }
+                }
+                return true; 
+        }
 }
