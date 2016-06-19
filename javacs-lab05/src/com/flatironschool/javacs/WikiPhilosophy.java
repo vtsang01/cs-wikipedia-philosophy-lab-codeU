@@ -3,6 +3,7 @@ package com.flatironschool.javacs;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Iterator;
 
 import org.jsoup.nodes.Element;
 import org.jsoup.nodes.Node;
@@ -13,17 +14,17 @@ import org.jsoup.select.Elements;
 public class WikiPhilosophy {
 	
 	private static WikiFetcher wf = new WikiFetcher();
-        final static String wiki_base_url = "https://en.wikipedia.org"; 
-	
+        final static String WIKI_BASE_URL = "https://en.wikipedia.org"; 
+	private static List<String> urls = new ArrayList<String>();
 	/**
 	 * Tests a conjecture about Wikipedia and Philosophy.
 	 * 
 	 * https://en.wikipedia.org/wiki/Wikipedia:Getting_to_Philosophy
 	 * 
 	 * 1. Clicking on the first non-parenthesized, non-italicized link
-     * 2. Ignoring external links, links to the current page, or red links
-     * 3. Stopping when reaching "Philosophy", a page with no links or a page
-     *    that does not exist, or when a loop occurs
+         * 2. Ignoring external links, links to the current page, or red links
+         * 3. Stopping when reaching "Philosophy", a page with no links or a page
+         *    that does not exist, or when a loop occurs
 	 * 
 	 * @param args
 	 * @throws IOException
@@ -35,24 +36,27 @@ public class WikiPhilosophy {
                 // String url = "https://en.wikipedia.org/wiki/Java_(programming_language)";
 		String url = "https://en.wikipedia.org/wiki/Apple";
 		Boolean found = crawl(url); 
-                if(found)
+                if(found){
+                        printURLS(); 
                         System.exit(0);
+                }
                 else
                         System.exit(1);
 	}
         private static Boolean crawl(String url){
                 String wiki = "https://en.wikipedia.org/wiki/Philosophy"; 
                 // Is it a good idea to make List a global and store links there? 
-                
-                System.out.println(url); 
+                urls.add(url); 
                 if (url.equals(wiki)){
                         return true; 
                 }
                 try{
+                        //Future: run in parallel w/ multiple thread (async threads ajax)
                         Elements paragraphs = wf.fetchWikipedia(url);
                         for (Element paragraph: paragraphs){
                                 Iterable<Node> iter = new WikiNodeIterable(paragraph);
                                 int parenthesis_count = 0; 
+                                // put into own function
                                 for (Node node: iter){
                                         if (node instanceof TextNode) {
                                                 TextNode current = (TextNode)node; 
@@ -69,7 +73,7 @@ public class WikiPhilosophy {
                                                 String thresholdText = "/wiki/";
                                                 Element elem = (Element)node; 
                                                 if (isValidLink(elem) && parenthesis_count == 0){
-                                                        String first_url = wiki_base_url + link;
+                                                        String first_url = WIKI_BASE_URL + link;
                                                         return crawl(first_url);
                                                 }
                                         }
@@ -81,6 +85,12 @@ public class WikiPhilosophy {
                 }
                 return false;
                
+        }
+        private static void printURLS(){
+                Iterator<String> urlIter = urls.iterator();
+                while (urlIter.hasNext()){
+                        System.out.println(urlIter.next());
+                }
         }
         private static Boolean isValidLink(Element elem){
                 String link = elem.attr("href");
